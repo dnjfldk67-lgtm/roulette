@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>반응속도 테스트</title>
+  <style>
+    body{
+      font-family: system-ui, sans-serif;
+      display:flex; flex-direction:column; align-items:center; gap:14px;
+      padding:30px; background:#0f172a; color:#e2e8f0;
+    }
+    #box{
+      width:320px; height:220px; border-radius:16px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:20px; font-weight:700; text-align:center;
+      background:#334155; cursor:pointer; user-select:none;
+      transition: background .2s;
+      box-shadow:0 10px 20px rgba(0,0,0,.35);
+    }
+    #info{ font-size:16px; opacity:.9; }
+    #best{ font-size:14px; opacity:.7; }
+    button{
+      padding:10px 16px; border:none; border-radius:12px;
+      background:#22c55e; color:#052e16; font-weight:800; cursor:pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>⚡ 반응속도 테스트</h2>
+
+  <div id="box">시작 버튼을 누르세요</div>
+
+  <button id="startBtn">시작</button>
+  <div id="info"></div>
+  <div id="best"></div>
+
+<script>
+(() => {
+  const box = document.getElementById("box");
+  const startBtn = document.getElementById("startBtn");
+  const info = document.getElementById("info");
+  const bestEl = document.getElementById("best");
+
+  let state = "idle"; // idle | waiting | go
+  let timerId = null;
+  let startTime = 0;
+
+  const BEST_KEY = "reaction_best_ms";
+  const loadBest = () => Number(localStorage.getItem(BEST_KEY) || 0);
+  const saveBest = (ms) => localStorage.setItem(BEST_KEY, String(ms));
+
+  function renderBest(){
+    const best = loadBest();
+    bestEl.textContent = best ? `🏆 최고기록: ${best} ms` : "🏆 최고기록 없음";
+  }
+
+  function setBox(bg, text){
+    box.style.background = bg;
+    box.textContent = text;
+  }
+
+  function reset(){
+    state = "idle";
+    if(timerId) clearTimeout(timerId);
+    timerId = null;
+    startTime = 0;
+    setBox("#334155", "시작 버튼을 누르세요");
+    info.textContent = "";
+    startBtn.disabled = false;
+  }
+
+  function start(){
+    state = "waiting";
+    startBtn.disabled = true;
+    info.textContent = "초록색으로 바뀌면 즉시 클릭!";
+    setBox("#ef4444", "대기중... 지금 누르면 실패!");
+    const delay = 1000 + Math.random() * 3000; // 1~4초
+    timerId = setTimeout(() => {
+      state = "go";
+      startTime = performance.now();
+      setBox("#22c55e", "지금 클릭!");
+    }, delay);
+  }
+
+  box.addEventListener("click", () => {
+    if(state === "waiting"){
+      // 너무 빨리 클릭
+      info.textContent = "❌ 너무 빨라요! 다시 해보세요.";
+      setBox("#f59e0b", "성급함 😅\n(다시 시작)");
+      state = "idle";
+      if(timerId) clearTimeout(timerId);
+      timerId = null;
+      startBtn.disabled = false;
+      return;
+    }
+
+    if(state === "go"){
+      const ms = Math.round(performance.now() - startTime);
+      info.textContent = `✅ 반응속도: ${ms} ms`;
+
+      const best = loadBest();
+      if(!best || ms < best){
+        saveBest(ms);
+        info.textContent += "  (신기록!) 🎉";
+      }
+
+      renderBest();
+      setBox("#0ea5e9", "다시 하려면 시작!");
+      state = "idle";
+      startBtn.disabled = false;
+    }
+  });
+
+  startBtn.addEventListener("click", start);
+
+  renderBest();
+})();
+</script>
+
+</body>
+</html>
