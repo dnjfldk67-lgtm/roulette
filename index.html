@@ -280,6 +280,7 @@
         const color = colors[i % colors.length];
         stops.push(`${color} ${start}deg ${end}deg`);
       }
+      // 원래 코드 그대로: 0도는 오른쪽(3시 방향)
       wheel.style.background = `conic-gradient(${stops.join(",")})`;
     }
 
@@ -369,6 +370,7 @@
       refreshUI();
     });
 
+    // ★ 수정된 스핀 로직: 위쪽 포인터(12시 방향, 270deg)를 기준으로 조각 중앙을 맞춤
     spinBtn.addEventListener("click", () => {
       const items = getUserItems();
 
@@ -387,18 +389,35 @@
 
       const targetIndex = Math.floor(Math.random() * sliceCount);
 
-      const extraTurns = 5 + Math.floor(Math.random() * 5); // 5~9바퀴
       anglePerSlice = 360 / sliceCount;
-      const targetAngle = targetIndex * anglePerSlice + anglePerSlice / 2;
 
-      const finalRotation = currentRotation + extraTurns * 360 - targetAngle;
+      // 이 조각의 '기본' 중심 각도 (기준: 오른쪽이 0deg, 시계 방향 +)
+      const sliceCenter = targetIndex * anglePerSlice + anglePerSlice / 2;
+
+      // 포인터는 위쪽(12시 방향) → 오른쪽 기준으로 270deg 지점
+      const pointerAngleFromRight = 270;
+
+      // 최종 회전각에서: (sliceCenter + finalRotation) % 360 === pointerAngleFromRight
+      // ⇒ finalRotation % 360 === pointerAngleFromRight - sliceCenter
+      let desiredRotMod = pointerAngleFromRight - sliceCenter;
+      desiredRotMod = ((desiredRotMod % 360) + 360) % 360;
+
+      // 현재 회전각(0~359)
+      const currentMod = ((currentRotation % 360) + 360) % 360;
+
+      // 지금 각도에서 desiredRotMod로 가기 위해 필요한 추가 회전량
+      let delta = desiredRotMod - currentMod;
+      delta = ((delta % 360) + 360) % 360;
+
+      const extraTurns = 5 + Math.floor(Math.random() * 5); // 5~9바퀴 더 돌리기
+      const finalRotation = currentRotation + delta + extraTurns * 360;
 
       currentRotation = finalRotation;
       wheel.style.transform = `rotate(${finalRotation}deg)`;
 
       setTimeout(() => {
         const selectedText = items[targetIndex];
-        resultDiv.textContent = `결과: "${selectedText}" 🎉`;
+        //resultDiv.textContent = `결과: "${selectedText}" 🎉`;
         updateLabelTexts(items, targetIndex);
         spinBtn.disabled = false;
       }, 3000);
